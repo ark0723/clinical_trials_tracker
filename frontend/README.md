@@ -1,32 +1,36 @@
-# React + TypeScript + Vite
+# Clinical Trial Tracker — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript frontend for the Clinical Trial Tracker (US market). Built with [Vite](https://vite.dev/).
 
-Currently, two official plugins are available:
+## Getting started
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+# Install dependencies
+npm install
 
-## React Compiler
+# Development server
+npm run dev
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# Run tests (Vitest + React Testing Library)
+npm run test:run
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+# Production build
+npm run build
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Folder structure
+
+```
+src/
+  components/   # UI components
+  api/          # Backend API client (to be added)
+  App.tsx       # Root app component
+  main.tsx      # Entry point
+```
+
+## Development principles
+
+- **User-facing copy**: All UI text must be in English (US audience).
+- **TDD**: Write component tests before or alongside UI changes.
+
+See `backend/README.md` for backend setup and project-wide docs under `docs/`.

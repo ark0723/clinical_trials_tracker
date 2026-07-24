@@ -4,7 +4,7 @@ function App() {
   return (
     <main>
       <h1>Clinical Trial Tracker</h1>
-      <p>HER2+ 유방암 임상시험 매칭 및 알림 서비스</p>
+      <p>Personalized HER2+ breast cancer trial matching and change alerts</p>
     </main>
   )
 }
