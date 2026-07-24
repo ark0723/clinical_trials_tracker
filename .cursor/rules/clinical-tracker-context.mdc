@@ -1,0 +1,22 @@
+---
+description: 임상실험 트래커 프로젝트 컨텍스트 및 개발 계획 참조
+alwaysApply: true
+---
+
+# 임상실험 트래커 (Clinical Trial Tracker)
+
+HER2+ 유방암 환자/보호자를 위한 개인화 임상시험 매칭 및 변경 알림 서비스. **Clean Code**와 **TDD(테스트 우선 개발)** 를 지향한다.
+
+코드를 작성하거나 설계를 논의하기 전에 반드시 아래 문서를 먼저 참고한다:
+
+- [docs/01-project-goals.mdc](../../docs/01-project-goals.mdc) — 프로젝트 목표 설정 (배경, 차별화 방향, 기술적 목표, 성과 지표)
+- [docs/02-user-requirements.mdc](../../docs/02-user-requirements.mdc) — 사용자 요구 정의 (페르소나, 사용자 여정, User Story)
+- [docs/03-feature-spec.mdc](../../docs/03-feature-spec.mdc) — 기능 명세 (기술 스택, 아키텍처, API/도메인 모델, TDD 전략)
+
+## 핵심 원칙 (요약)
+
+1. **Clean Code**: 단일 책임 원칙, 낮은 결합도 — 매칭 로직은 반드시 인터페이스(`MatchingStrategy`) 뒤에서 구현하여 규칙 기반 → ML 기반 교체가 가능하도록 유지한다.
+2. **TDD**: Red → Green → Refactor 순서를 지킨다. 실패하는 테스트 없이 기능 코드를 먼저 작성하지 않는다. 외부 의존성(DB, ClinicalTrials.gov API, 이메일/텔레그램)은 목(mock)으로 대체해 테스트한다.
+3. **기술 스택**: Backend는 FastAPI + SQLAlchemy + pytest, Frontend는 React + TypeScript + Vitest를 사용한다 (Next.js/Prisma 아님 — Python 풀스택으로 확정됨).
+
+세부 사항이 이 요약과 상충하면 위 3개 문서의 최신 내용을 따른다.
