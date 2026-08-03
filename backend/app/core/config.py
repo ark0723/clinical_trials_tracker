@@ -12,5 +12,7 @@ class Settings(BaseSettings):
     ctgov_condition_query: str = "HER2-positive breast cancer"
     ctgov_page_size: int = 100
 
+    profile_encryption_key: str | None = None
+
 
 settings = Settings()
