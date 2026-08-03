@@ -1,0 +1,36 @@
+name: Sync Clinical Trials
+
+# Daily ingestion job (docs/03-feature-spec.mdc "기능 2"). Requires a `DATABASE_URL`
+# repository secret pointing at the production Postgres instance -- until that
+# secret is configured (see backend/README.md), scheduled runs will fail; use
+# `workflow_dispatch` to trigger manually once the DB is provisioned.
+on:
+  schedule:
+    - cron: "0 15 * * *" # 00:00 KST
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: Sync ClinicalTrials.gov data
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Run database migrations
+        run: uv run alembic upgrade head
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Sync clinical trials
+        run: uv run python -m app.scripts.sync_trials
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
