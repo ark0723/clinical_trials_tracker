@@ -1,15 +1,17 @@
 """Clinical trial domain models (Product Layer).
 
-Schema follows docs/03-feature-spec.mdc section 3.3. Only the subset needed
-for Week 2 (ingestion + trial search/detail) is included here;
-StructuredEligibility, MatchScore, etc. are added in later weeks.
+Schema follows docs/03-feature-spec.mdc section 3.3.
+StructuredEligibility is produced by the rule-based ML/Data Layer extractor
+(Week 3; no LLM). MatchScore arrives in Week 4.
 """
 
 from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.domain.eligibility import StructuredEligibility
 
 
 class TrialPhase(StrEnum):
@@ -60,7 +62,8 @@ class ClinicalTrial(BaseModel):
     eligibility_criteria_simplified: str | None = None
     enrollment_count: int | None = None
     has_results: bool = False
-    locations: list[TrialLocation] = []
+    locations: list[TrialLocation] = Field(default_factory=list)
+    structured_eligibility: StructuredEligibility | None = None
     last_updated: datetime
 
 

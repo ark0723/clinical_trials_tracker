@@ -7,7 +7,7 @@ domain/API layer).
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.clinical_trial import TrialChangeEventType, TrialPhase, TrialStatus
@@ -29,6 +29,12 @@ class ClinicalTrialModel(Base):
 
     locations: Mapped[list["TrialLocationModel"]] = relationship(
         back_populates="trial", cascade="all, delete-orphan"
+    )
+    structured_eligibility: Mapped["StructuredEligibilityModel | None"] = relationship(
+        back_populates="trial",
+        cascade="all, delete-orphan",
+        single_parent=True,
+        uselist=False,
     )
 
 
@@ -55,3 +61,32 @@ class TrialChangeEventModel(Base):
     old_value: Mapped[str | None] = mapped_column(Text, default=None)
     new_value: Mapped[str] = mapped_column(Text)
     detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class StructuredEligibilityModel(Base):
+    __tablename__ = "structured_eligibility"
+
+    nct_id: Mapped[str] = mapped_column(
+        ForeignKey("clinical_trials.nct_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    age_min: Mapped[int | None] = mapped_column(Integer, default=None)
+    age_max: Mapped[int | None] = mapped_column(Integer, default=None)
+    diagnosis: Mapped[str | None] = mapped_column(String(255), default=None)
+    prior_treatments: Mapped[list[str]] = mapped_column(JSON, default=list)
+    ecog: Mapped[list[int]] = mapped_column(JSON, default=list)
+    biomarkers: Mapped[list[str]] = mapped_column(JSON, default=list)
+    brain_metastasis: Mapped[bool | None] = mapped_column(default=None)
+    extraction_confidence: Mapped[float] = mapped_column()
+    extraction_method: Mapped[str] = mapped_column(String(20))
+
+    trial: Mapped[ClinicalTrialModel] = relationship(back_populates="structured_eligibility")
+
+
+class UserProfileModel(Base):
+    __tablename__ = "user_profiles"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    encrypted_health_data: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
