@@ -10,12 +10,19 @@ from typing import Any, Protocol
 from sqlalchemy.orm import Session
 
 from app.domain.clinical_trial import ClinicalTrial, TrialChangeEvent
+from app.domain.eligibility import StructuredEligibility
 from app.infrastructure.ctgov_mapper import map_study_to_trial
 from app.infrastructure.models import (
     ClinicalTrialModel,
+    StructuredEligibilityModel,
     TrialChangeEventModel,
     TrialLocationModel,
 )
+from app.services.eligibility_extractor import (
+    EligibilityExtractor,
+    RuleBasedEligibilityExtractor,
+)
+from app.services.eligibility_summarizer import RuleBasedEligibilitySummarizer
 
 
 class TrialSource(Protocol):
@@ -104,11 +111,33 @@ def _apply_trial_fields(model: ClinicalTrialModel, trial: ClinicalTrial) -> None
     ]
 
 
+def _upsert_structured_eligibility(
+    db: Session,
+    nct_id: str,
+    structured: StructuredEligibility,
+) -> None:
+    model = db.get(StructuredEligibilityModel, nct_id)
+    if model is None:
+        model = StructuredEligibilityModel(nct_id=nct_id)
+        db.add(model)
+
+    model.age_min = structured.age_min
+    model.age_max = structured.age_max
+    model.diagnosis = structured.diagnosis
+    model.prior_treatments = list(structured.prior_treatments)
+    model.ecog = list(structured.ecog)
+    model.biomarkers = list(structured.biomarkers)
+    model.brain_metastasis = structured.brain_metastasis
+    model.extraction_confidence = structured.extraction_confidence
+    model.extraction_method = structured.extraction_method
+
+
 def sync_clinical_trials(
     db: Session,
     client: TrialSource,
     condition: str,
     statuses: list[str] | None = None,
+    extractor: EligibilityExtractor | None = None,
 ) -> SyncResult:
     """Fetch and persist trials one at a time, committing after each.
 
@@ -117,11 +146,20 @@ def sync_clinical_trials(
     limiting, see plan's "incremental-commit" decision) does not discard
     already-synced trials -- the next run simply resumes from where it left
     off, since new/updated trials are looked up by nct_id.
+
+    After mapping each study, a rule-based extractor (MVP: no LLM) fills
+    StructuredEligibility and a deterministic plain-English summary.
     """
     result = SyncResult()
+    extractor = extractor or RuleBasedEligibilityExtractor()
+    summarizer = RuleBasedEligibilitySummarizer()
 
     for raw_study in client.search_studies(condition=condition, statuses=statuses):
         incoming = map_study_to_trial(raw_study)
+        structured = extractor.extract(incoming.eligibility_criteria_raw)
+        incoming.eligibility_criteria_simplified = summarizer.summarize(structured)
+        incoming.structured_eligibility = structured
+
         existing = db.get(ClinicalTrialModel, incoming.nct_id)
 
         if existing is None:
@@ -146,6 +184,7 @@ def sync_clinical_trials(
                 )
             result.events.extend(events)
 
+        _upsert_structured_eligibility(db, incoming.nct_id, structured)
         db.commit()
 
     return result

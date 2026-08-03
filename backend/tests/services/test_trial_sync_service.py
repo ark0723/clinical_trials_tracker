@@ -4,7 +4,11 @@ from typing import Any
 import pytest
 from sqlalchemy.orm import Session
 
-from app.infrastructure.models import ClinicalTrialModel, TrialChangeEventModel
+from app.infrastructure.models import (
+    ClinicalTrialModel,
+    StructuredEligibilityModel,
+    TrialChangeEventModel,
+)
 from app.services.trial_sync_service import sync_clinical_trials
 
 
@@ -52,6 +56,31 @@ def test_sync_creates_new_trial_when_not_in_db(db_session: Session):
     assert result.created == 1
     assert result.updated == 0
     assert result.events == []
+
+
+def test_sync_extracts_and_persists_structured_eligibility(db_session: Session):
+    raw = build_raw_study()
+    raw["protocolSection"]["eligibilityModule"]["eligibilityCriteria"] = (
+        "Age >= 18 and <= 75. HER2-positive breast cancer. "
+        "ECOG performance status 0 or 1."
+    )
+
+    sync_clinical_trials(
+        db_session,
+        FakeClinicalTrialsGovClient([raw]),
+        condition="HER2-positive breast cancer",
+    )
+
+    trial = db_session.get(ClinicalTrialModel, "NCT01234567")
+    structured = db_session.get(StructuredEligibilityModel, "NCT01234567")
+    assert trial is not None
+    assert structured is not None
+    assert structured.age_min == 18
+    assert structured.age_max == 75
+    assert structured.biomarkers == ["HER2-positive"]
+    assert structured.ecog == [0, 1]
+    assert trial.eligibility_criteria_simplified is not None
+    assert "ages 18 to 75" in trial.eligibility_criteria_simplified
 
 
 def test_sync_detects_status_change_and_creates_event(db_session: Session):
