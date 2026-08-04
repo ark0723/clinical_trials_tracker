@@ -6,15 +6,18 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_db_session, get_profile_cipher
 from app.domain.clinical_trial import TrialPhase, TrialStatus
-from app.infrastructure.models import ClinicalTrialModel, StructuredEligibilityModel
+from app.infrastructure.models import ClinicalTrialModel, StructuredEligibilityModel, TrialLocationModel
 from app.main import app
 from app.services.profile_cipher import ProfileCipher
+from app.services.trial_match_loader import clear_candidate_cache
 
 
 @pytest.fixture(autouse=True)
 def _reset_dependency_overrides():
+    clear_candidate_cache()
     yield
     app.dependency_overrides.clear()
+    clear_candidate_cache()
 
 
 @pytest.fixture()
@@ -38,6 +41,13 @@ def seed_recruiting_trial(db_session: Session, nct_id: str = "NCT01234567") -> N
         enrollment_count=120,
         has_results=False,
         last_updated=datetime(2026, 1, 15, tzinfo=UTC),
+        locations=[
+            TrialLocationModel(
+                facility="Dana-Farber",
+                city="Boston",
+                country="United States",
+            )
+        ],
     )
     structured = StructuredEligibilityModel(
         nct_id=nct_id,
@@ -69,7 +79,10 @@ def test_get_matches_returns_ranked_results_for_existing_profile(
             "stage": "III",
             "biomarkers": ["HER2-positive"],
             "current_treatment": "trastuzumab",
-            "max_travel_distance_km": 100,
+            "postal_code": "10001",
+            "ecog": 0,
+            "brain_metastasis": "unknown",
+            "max_travel_distance_miles": 100,
             "notification_channels": ["email"],
         },
     ).json()
@@ -80,6 +93,7 @@ def test_get_matches_returns_ranked_results_for_existing_profile(
     matches = response.json()["matches"]
     assert len(matches) == 1
     assert matches[0]["trial"]["nct_id"] == "NCT01234567"
+    assert matches[0]["trial"]["title"] == "HER2+ recruiting study"
     assert matches[0]["total"] > 0.8
     assert matches[0]["rationale"]
 

@@ -1,5 +1,6 @@
 from app.domain.user_profile import (
     CancerStage,
+    CurrentTreatment,
     NotificationChannel,
     UserProfileCreate,
 )
@@ -11,8 +12,8 @@ def build_profile() -> UserProfileCreate:
         age=45,
         stage=CancerStage.STAGE_III,
         biomarkers=["HER2-positive"],
-        current_treatment="trastuzumab deruxtecan",
-        max_travel_distance_km=100,
+        current_treatment=CurrentTreatment.TRASTUZUMAB_DERUXTECAN,
+        max_travel_distance_miles=100,
         notification_channels=[NotificationChannel.EMAIL],
     )
 
@@ -33,3 +34,31 @@ def test_same_profile_uses_randomized_ciphertext():
     profile = build_profile()
 
     assert cipher.encrypt(profile) != cipher.encrypt(profile)
+
+
+def test_legacy_free_text_treatment_aliases_are_normalized():
+    profile = UserProfileCreate(
+        age=45,
+        stage=CancerStage.STAGE_III,
+        biomarkers=["HER2-positive"],
+        current_treatment="Enhertu (trastuzumab deruxtecan)",
+        max_travel_distance_miles=100,
+        notification_channels=[NotificationChannel.EMAIL],
+    )
+
+    assert profile.current_treatment == CurrentTreatment.TRASTUZUMAB_DERUXTECAN
+
+
+def test_legacy_travel_distance_km_is_converted_to_miles():
+    profile = UserProfileCreate.model_validate(
+        {
+            "age": 45,
+            "stage": "III",
+            "biomarkers": ["HER2-positive"],
+            "current_treatment": "trastuzumab",
+            "max_travel_distance_km": 100,
+            "notification_channels": ["email"],
+        }
+    )
+
+    assert profile.max_travel_distance_miles == 62

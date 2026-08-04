@@ -187,4 +187,8 @@ def sync_clinical_trials(
         _upsert_structured_eligibility(db, incoming.nct_id, structured)
         db.commit()
 
+    # Matching API keeps an in-process lean-trial cache; invalidate after sync.
+    from app.services.trial_match_loader import clear_candidate_cache
+
+    clear_candidate_cache()
     return result

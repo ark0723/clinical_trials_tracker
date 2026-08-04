@@ -11,7 +11,11 @@ class Base(DeclarativeBase):
 
 
 def create_db_engine(database_url: str | None = None) -> Engine:
-    return create_engine(database_url or settings.database_url)
+    return create_engine(
+        database_url or settings.database_url,
+        pool_pre_ping=True,
+        pool_recycle=300,
+    )
 
 
 engine = create_db_engine()

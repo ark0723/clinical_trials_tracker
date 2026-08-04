@@ -30,8 +30,11 @@ def profile_payload(**overrides) -> dict:
         "age": 45,
         "stage": "III",
         "biomarkers": ["HER2-positive"],
-        "current_treatment": "trastuzumab deruxtecan",
-        "max_travel_distance_km": 100,
+        "current_treatment": "trastuzumab_deruxtecan",
+        "postal_code": "02115",
+        "ecog": 1,
+        "brain_metastasis": "no",
+        "max_travel_distance_miles": 100,
         "notification_channels": ["email"],
     }
     payload.update(overrides)
@@ -49,8 +52,10 @@ def test_create_profile_returns_id_and_stores_encrypted_payload(
     assert response.status_code == 201
     body = response.json()
     assert body["id"]
-    assert body["age"] == 45
-    assert body["stage"] == "III"
+    assert body["current_treatment"] == "trastuzumab_deruxtecan"
+    assert body["postal_code"] == "02115"
+    assert body["ecog"] == 1
+    assert body["brain_metastasis"] == "no"
 
     stored = db_session.get(UserProfileModel, body["id"])
     assert stored is not None
@@ -82,12 +87,12 @@ def test_update_profile_replaces_encrypted_payload(
 
     response = client.put(
         f"/api/users/profile/{created['id']}",
-        json=profile_payload(age=46, max_travel_distance_km=250),
+        json=profile_payload(age=46, max_travel_distance_miles=250),
     )
 
     assert response.status_code == 200
     assert response.json()["age"] == 46
-    assert response.json()["max_travel_distance_km"] == 250
+    assert response.json()["max_travel_distance_miles"] == 250
     db_session.refresh(stored)
     assert stored.encrypted_health_data != original_ciphertext
 
