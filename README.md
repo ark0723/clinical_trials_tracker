@@ -10,6 +10,14 @@ ingestion, LLM-assisted eligibility structuring, benchmark datasets, and
 leakage-resistant evaluation). See `docs/03-feature-spec.mdc` for the full
 architecture (planning docs are local-only, see below).
 
+## Current status (Week 4 MVP)
+
+- **Backend**: ClinicalTrials.gov sync, encrypted profiles, rule-based
+  matching with travel-distance hard filters (ZIP → site miles), lean
+  cached trial loading for fast recommendations.
+- **Frontend**: Dashboard with health profile form and ranked recommended
+  trials (compatibility, criteria breakdown, sites, nearest-site miles).
+
 ## Project structure
 
 ```
@@ -23,7 +31,17 @@ docs/      # Planning docs: project goals, user requirements, feature spec
 
 - Backend setup, local Postgres via Docker, migrations, and the
   ClinicalTrials.gov data sync job: see [`backend/README.md`](backend/README.md).
-- Frontend setup: see [`frontend/README.md`](frontend/README.md).
+- Frontend setup and dashboard: see [`frontend/README.md`](frontend/README.md).
+
+Typical local flow:
+
+```bash
+# Terminal 1 — API
+cd backend && uv sync && uv run alembic upgrade head && uv run fastapi dev app/main.py
+
+# Terminal 2 — UI (proxies /api → :8000)
+cd frontend && npm install && npm run dev
+```
 
 ## Development principles
 

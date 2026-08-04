@@ -56,13 +56,21 @@ In production this runs daily via [.github/workflows/sync-trials.yml](../.github
 described below. That workflow reads its connection string from a
 `DATABASE_URL` repository secret (Settings → Secrets and variables → Actions).
 
+After a successful sync, the in-process lean-trial cache used by matching is
+invalidated so recommendations pick up new/updated sites.
+
 ## User profiles
 
-Encrypted patient profiles (age, stage, biomarkers, etc.) are available at:
+Encrypted patient profiles are available at:
 
 - `POST /api/users/profile`
 - `GET /api/users/profile/{user_id}`
 - `PUT /api/users/profile/{user_id}`
+
+Profile fields used for matching include age, stage, biomarkers, prior
+treatments, **current treatment**, **ECOG**, **brain metastasis**, **US ZIP
+(`postal_code`)**, and **`max_travel_distance_miles`** (US-facing miles; legacy
+encrypted profiles that stored km are migrated on decrypt).
 
 Set `PROFILE_ENCRYPTION_KEY` in `.env` (Fernet key; see `.env.example`). Without
 it, profile endpoints return HTTP 503 so sensitive data is never stored in
@@ -73,9 +81,32 @@ plaintext by accident.
 `GET /api/matches/{user_id}?limit=10` scores active recruiting trials against
 the user's encrypted profile using `StructuredEligibility` from sync (never
 re-parses raw eligibility text). Results include `matched_criteria`,
-`missing_criteria`, `unknown_criteria`, and a plain-English `rationale`.
-Hard excludes (score 0) apply only when age or biomarker conflicts are
-high-confidence; low-confidence structured fields are marked "unable to verify".
+`missing_criteria`, `unknown_criteria`, plain-English `rationale`,
+`confidence`, and `nearest_site_miles` when a distance can be computed.
+
+Key ranking / filter rules:
+
+- **Compatibility score** uses a full-weight denominator so unknown or missing
+  criteria reduce the score (no score inflation).
+- **Hard excludes** (score 0, dropped from recommendations): high-confidence
+  age/biomarker conflicts, and HER2-negative / TNBC-oriented trials for
+  HER2-positive users (title + structured diagnosis).
+- **Travel distance**: ZIP is geocoded (Nominatim, cached); haversine miles to
+  each trial site with coordinates. Trials whose **nearest site exceeds**
+  `max_travel_distance_miles` are **excluded** from recommendations. In-range
+  trials prefer nearer sites; trials with **no listed sites** sort below
+  trials with known distances.
+- Recommendations sort by score, then nearer site, then travel evidence, then
+  eligibility-data confidence.
+
+### Match performance
+
+Matching loads a **lean** trial projection (`trial_match_loader`) with an
+in-process TTL cache, warmed on app startup. Prefer Neon's **pooled**
+(`-pooler`) connection string for app traffic (see `.env.example`); keep a
+direct URL for Alembic if needed. DB engine uses `pool_pre_ping` and
+`pool_recycle` for serverless Postgres. An index on trial `overall_status`
+supports candidate filtering.
 
 See `docs/03-feature-spec.mdc` sections 3.4 (기능 3) and 3.10 (LLM policy).
 
@@ -92,8 +123,12 @@ the local Docker Postgres used for development.
   Neon connection string (`postgresql+psycopg://...neon.tech/...?sslmode=require`),
   then run `uv run alembic upgrade head` / `uv run python -m app.scripts.sync_trials`
   as usual.
+- For interactive API traffic, prefer the Neon **pooler** hostname
+  (`-pooler` in the host).
 - Neon's free tier scales to zero when idle, so the first request after
   inactivity may take a couple seconds longer (cold start) -- this is normal.
+  The match-trial cache warm on startup reduces first-match latency after the
+  DB is reachable.
 
 ## Database migrations
 
@@ -109,14 +144,14 @@ uv run alembic revision --autogenerate -m "describe the change"
 
 ```
 app/
-  api/            # FastAPI routers (trials, user profiles)
+  api/            # FastAPI routers (trials, user profiles, matches)
   core/           # Settings and shared utilities
-  domain/         # Pydantic models (ClinicalTrial, StructuredEligibility, UserProfile)
-  services/       # Sync, rule-based eligibility extract/summarize, profile cipher
+  domain/         # Pydantic models (ClinicalTrial, StructuredEligibility, UserProfile, MatchScore)
+  services/       # Sync, eligibility extract, matching, geo, lean trial loader, profile cipher
   infrastructure/ # DB models/session and ClinicalTrials.gov client
   scripts/        # CLI entry points (e.g. sync_trials.py)
   dependencies.py # Shared FastAPI dependencies
-  main.py         # FastAPI app entry point
+  main.py         # FastAPI app entry point (warms match-trial cache)
 alembic/          # DB migrations
 tests/            # pytest tests (write tests first)
 ```
