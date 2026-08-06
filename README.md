@@ -1,22 +1,35 @@
-# Clinical Trial Tracker
+# AI Clinical Trial Navigator
 
-A personalized clinical trial matching and change-notification service for
-HER2-positive breast cancer patients and caregivers (US market).
+An evidence-grounded AI assistant for discovering, understanding, and
+monitoring clinical trials.
 
-Beyond the patient-facing product, the project is architected as a two-layer
-system: a **Product Layer** (trial search, patient matching, notifications,
-timeline) sitting on top of an internal **ML/Data Layer** (clinical data
-ingestion, LLM-assisted eligibility structuring, benchmark datasets, and
-leakage-resistant evaluation). See `docs/03-feature-spec.mdc` for the full
-architecture (planning docs are local-only, see below).
+**Mission:** Help cancer patients discover, understand, and monitor clinical
+trial opportunities with transparent, evidence-grounded AI assistance
+(US market; initial focus: HER2-positive breast cancer).
 
-## Current status (Week 4 MVP)
+Built on the Clinical Trial Tracker foundation (same repo): Product Layer
+(discovery, matching, saved trials, monitoring) plus Agent / ML-Data layers
+(eligibility structuring, RAG, evaluation). Planning docs (local): `docs/01`–`03`.
 
-- **Backend**: ClinicalTrials.gov sync, encrypted profiles, rule-based
-  matching with travel-distance hard filters (ZIP → site miles), lean
-  cached trial loading for fast recommendations.
-- **Frontend**: Dashboard with health profile form and ranked recommended
-  trials (compatibility, criteria breakdown, sites, nearest-site miles).
+Assistive only — potentially relevant trials, why they match, things to
+confirm, and questions for a doctor — not AI treatment decisions.
+
+## Current status & roadmap
+
+**Foundation (done) — Clinical Trial Tracker**
+
+- Backend: ClinicalTrials.gov sync, encrypted profiles, rule-based matching
+  with travel-distance hard filters, lean trial cache.
+- Frontend: health profile form and ranked matches (compatibility, criteria,
+  sites, nearest-site miles).
+
+**Next (product-first):** Patient Journey Platform — **Understanding**,
+saved trials, monitoring/alerts — then AI understanding (paid tier), then
+LangGraph Navigator (with Planner) + MCP + evaluation, then personalized
+decision support and platform expansion.
+
+**Hosting path (decided):** ngrok (push experiments) → Vercel frontend for
+MVP testing → separate production deploys for frontend and backend.
 
 ## Project structure
 
@@ -42,6 +55,14 @@ cd backend && uv sync && uv run alembic upgrade head && uv run fastapi dev app/m
 # Terminal 2 — UI (proxies /api → :8000)
 cd frontend && npm install && npm run dev
 ```
+
+### Vercel (frontend MVP)
+
+Deploy from `frontend/` (`vercel --prod`). Set build-time env
+`VITE_API_BASE_URL` to a publicly reachable API origin. On the API host, set
+`CORS_ORIGINS` to the Vercel URL (comma-separated). Until the backend is
+deployed separately, you can point `VITE_API_BASE_URL` at an ngrok tunnel to
+local FastAPI.
 
 ## Development principles
 

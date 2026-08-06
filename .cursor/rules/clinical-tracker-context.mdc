@@ -1,27 +1,34 @@
 ---
-description: 임상실험 트래커 프로젝트 컨텍스트 및 개발 계획 참조
+description: Clinical Trial Navigator 컨텍스트 — Mission 우선, 기술은 수단
 alwaysApply: true
 ---
 
-# 임상실험 트래커 (Clinical Trial Tracker)
+# AI Clinical Trial Navigator
 
-HER2+ 유방암 환자/보호자를 위한 개인화 임상시험 매칭 및 변경 알림 서비스. **Clean Code**와 **TDD(테스트 우선 개발)** 를 지향한다.
+**One-liner:** An evidence-grounded AI assistant for discovering, understanding, and monitoring clinical trials.
 
-코드를 작성하거나 설계를 논의하기 전에 반드시 아래 문서를 먼저 참고한다:
+**Mission:** Help cancer patients discover, understand, and monitor clinical trial opportunities with transparent, evidence-grounded AI assistance.
 
-- [docs/01-project-goals.mdc](../../docs/01-project-goals.mdc) — 프로젝트 목표 설정 (배경, 차별화 방향, 기술적 목표, 성과 지표)
-- [docs/02-user-requirements.mdc](../../docs/02-user-requirements.mdc) — 사용자 요구 정의 (페르소나, 사용자 여정, User Story)
-- [docs/03-feature-spec.mdc](../../docs/03-feature-spec.mdc) — 기능 명세 (기술 스택, 아키텍처, API/도메인 모델, TDD 전략)
+**Not:** AI that tells patients which trial to take.  
+**Yes:** Potentially relevant trials + why + things to confirm + questions for a doctor.
 
-## 핵심 원칙 (요약)
+HER2+ breast cancer, US market. Evolve Tracker → Patient Journey Platform → AI Navigator → Decision Support → Platform. **Clean Code + TDD**.
 
-1. **Clean Code**: 단일 책임 원칙, 낮은 결합도 — 매칭 로직은 반드시 인터페이스(`MatchingStrategy`) 뒤에서 구현하여 규칙 기반 → ML 기반 교체가 가능하도록 유지한다.
-2. **TDD**: Red → Green → Refactor 순서를 지킨다. 실패하는 테스트 없이 기능 코드를 먼저 작성하지 않는다. 외부 의존성(DB, ClinicalTrials.gov API, 이메일/텔레그램)은 목(mock)으로 대체해 테스트한다.
-3. **기술 스택**: Backend는 FastAPI + SQLAlchemy + pytest, Frontend는 React + TypeScript + Vitest를 사용한다 (Next.js/Prisma 아님 — Python 풀스택으로 확정됨).
-4. **언어 / 로케일 (US 시장 대상)**:
-   - **대화(에이전트 ↔ 사용자)**: 한국어로 응답한다.
-   - **사용자-facing 산출물은 영어(미국)로 작성한다**: 웹 UI 텍스트, `README.md`, API 에러/응답 메시지, 이메일/알림 문구, 온보딩·도움말 등.
-   - 코드 주석·커밋 메시지·내부 개발 문서(`docs/`)는 한국어/영어 모두 허용하되, **README와 UI 카피는 반드시 영어**를 기본으로 한다.
-5. **Product Layer / ML Layer 분리**: 사용자 대면 기능(검색·매칭·알림·타임라인)과 내부 엔진(데이터 수집, Eligibility 구조화 추출, 벤치마크·leakage-resistant evaluation)을 계층으로 분리하여 설계한다 (자세한 내용은 `03-feature-spec.mdc` 참고).
+Read before coding or design discussion:
 
-세부 사항이 이 요약과 상충하면 위 3개 문서의 최신 내용을 따른다.
+- [docs/01-project-goals.mdc](../../docs/01-project-goals.mdc) — Mission, success, competition, Why now, phases
+- [docs/02-user-requirements.mdc](../../docs/02-user-requirements.mdc) — Personas, journey (Understanding-centric), MVP priority
+- [docs/03-feature-spec.mdc](../../docs/03-feature-spec.mdc) — Architecture (Planner), MCP domains, LLM policy
+- [architect-agent-roles.mdc](architect-agent-roles.mdc) — Design = user / Implement = Cursor
+
+## Principles
+
+1. Lead with **user outcomes**, not LangGraph/MCP as the story.
+2. **Understanding** is the core gap vs ClinicalTrials.gov; prioritize before full Agent.
+3. Keep Foundation (rule match, sync, dashboard); extend — do not rewrite from scratch.
+4. Product / Agent / ML-Data layers; Agent flow includes **Intent → Planner → … → Evaluate → Answer**.
+5. Locale: chat with user in **Korean**; user-facing product copy in **English (US)**.
+6. Paid LLM only for PHI paths; free tier + health prompts banned.
+7. Honor `[DECISION: …]` gates; do not invent product/architecture finals.
+
+If this summary conflicts with `docs/01`–`03`, follow those docs.

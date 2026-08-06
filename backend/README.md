@@ -35,6 +35,23 @@ uv run pytest
 uv run ruff check .
 ```
 
+## Browser push notifications (default channel)
+
+Alerts use a pluggable `NotificationProvider` stack. **Browser Web Push** is the
+default; Email and Telegram providers are stubs for later.
+
+```bash
+# Generate VAPID keys
+uv run python -m app.scripts.generate_vapid_keys
+# Copy VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_SUBJECT into .env
+uv run alembic upgrade head
+```
+
+After trial sync, `notify_saved_trial_changes` sends pushes to users who saved
+the NCT and have `browser` in `notification_channels`.
+
+**iOS**: Safari Web Push requires adding the site to the Home Screen (PWA).
+
 ## Data ingestion (ClinicalTrials.gov sync)
 
 `app/scripts/sync_trials.py` fetches trials from the ClinicalTrials.gov API v2,
