@@ -336,6 +336,36 @@ button:disabled {
   gap: 0.5rem;
 }
 
+.profile-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.profile-summary__grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(8rem, 11rem) 1fr;
+  gap: 0.55rem 1.25rem;
+  width: min(100%, 28rem);
+}
+
+.profile-summary__row {
+  display: contents;
+}
+
+.profile-summary__grid dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.profile-summary__grid dd {
+  margin: 0;
+  font-weight: 600;
+}
+
 .status-filter {
   margin: 0 0 1rem;
   padding: 0.85rem 1rem;

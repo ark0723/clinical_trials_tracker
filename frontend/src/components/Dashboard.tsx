@@ -1,10 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
-import { createProfile, getMatches, listSavedTrials, updateProfile } from '../api/client'
+import {
+  createProfile,
+  getMatches,
+  getProfile,
+  listSavedTrials,
+  updateProfile,
+} from '../api/client'
 import type { TrialStatus, UserProfileCreate } from '../api/types'
 import { MatchResults } from './MatchResults'
 import { ProfileForm } from './ProfileForm'
+import { ProfileSummary } from './ProfileSummary'
 import { PushAlerts } from './PushAlerts'
 import { PATIENT_DEFAULT_STATUSES, StatusFilter } from './StatusFilter'
 
@@ -26,6 +33,12 @@ export function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<TrialStatus[]>([
     ...PATIENT_DEFAULT_STATUSES,
   ])
+
+  const profileQuery = useQuery({
+    queryKey: ['profile', userId],
+    queryFn: () => getProfile(userId!),
+    enabled: Boolean(userId),
+  })
 
   const matchesQuery = useQuery({
     queryKey: ['matches', userId, statusFilter],
@@ -51,32 +64,29 @@ export function Dashboard() {
       setUserId(profile.id)
       setIsEditingProfile(false)
       setFormError(null)
-      queryClient.invalidateQueries({ queryKey: ['matches', profile.id] })
+      queryClient.setQueryData(['profile', profile.id], profile)
+      void queryClient.invalidateQueries({ queryKey: ['profile', profile.id] })
+      void queryClient.invalidateQueries({ queryKey: ['matches', profile.id] })
+      void queryClient.invalidateQueries({ queryKey: ['saved-trials', profile.id] })
     },
     onError: (error: Error) => {
       setFormError(error.message)
     },
   })
 
-  const showProfileForm = !userId || isEditingProfile
+  const showCreateForm = !userId
+  const showEditForm = Boolean(userId) && isEditingProfile
+  const showSummary =
+    Boolean(userId) && !isEditingProfile && Boolean(profileQuery.data)
 
   return (
     <div className="dashboard">
       <section className="dashboard__section">
         <header className="section-header">
-          <h2>Your health profile</h2>
-          {userId && !isEditingProfile ? (
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={() => setIsEditingProfile(true)}
-            >
-              Edit profile
-            </button>
-          ) : null}
+          <h2>{showSummary ? 'Your profile' : 'Your health profile'}</h2>
         </header>
 
-        {showProfileForm ? (
+        {showCreateForm ? (
           <>
             <p className="section-intro">
               Enter your health details to find HER2+ breast cancer trials that
@@ -94,12 +104,60 @@ export function Dashboard() {
               isSubmitting={saveProfileMutation.isPending}
             />
           </>
-        ) : (
-          <p className="section-intro">
-            Profile saved. Review recommended trials below or edit your profile
-            to refresh matches.
+        ) : null}
+
+        {showEditForm ? (
+          <>
+            <p className="section-intro">
+              Update your health details. Changes refresh your recommended trials.
+            </p>
+            {formError ? (
+              <p className="status-message status-message--error" role="alert">
+                {formError}
+              </p>
+            ) : null}
+            {profileQuery.isLoading ? (
+              <p className="status-message">Loading your profile…</p>
+            ) : profileQuery.error ? (
+              <p className="status-message status-message--error" role="alert">
+                {profileQuery.error.message}
+              </p>
+            ) : profileQuery.data ? (
+              <ProfileForm
+                key={profileQuery.data.id}
+                initialProfile={profileQuery.data}
+                onSubmit={async (payload) => {
+                  await saveProfileMutation.mutateAsync(payload)
+                }}
+                isSubmitting={saveProfileMutation.isPending}
+              />
+            ) : null}
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={() => setIsEditingProfile(false)}
+            >
+              Cancel
+            </button>
+          </>
+        ) : null}
+
+        {userId && !isEditingProfile && profileQuery.isLoading ? (
+          <p className="status-message">Loading your profile…</p>
+        ) : null}
+
+        {userId && !isEditingProfile && profileQuery.error ? (
+          <p className="status-message status-message--error" role="alert">
+            {profileQuery.error.message}
           </p>
-        )}
+        ) : null}
+
+        {showSummary && profileQuery.data ? (
+          <ProfileSummary
+            profile={profileQuery.data}
+            onEdit={() => setIsEditingProfile(true)}
+          />
+        ) : null}
       </section>
 
       {userId && !isEditingProfile ? (

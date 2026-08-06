@@ -23,7 +23,7 @@ describe('Dashboard', () => {
     expect(screen.getByLabelText(/^age$/i)).toBeInTheDocument()
   })
 
-  it('creates a profile and displays match results', async () => {
+  it('creates a profile and displays summary plus match results', async () => {
     const user = userEvent.setup()
 
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
@@ -33,13 +33,27 @@ describe('Dashboard', () => {
         return new Response(JSON.stringify(sampleProfile), { status: 201 })
       }
 
+      if (url.includes('/api/users/profile/user-123') && !init?.method) {
+        return new Response(JSON.stringify(sampleProfile), { status: 200 })
+      }
+
       if (url.includes('/api/matches/user-123')) {
         return new Response(JSON.stringify({ matches: [sampleMatch] }), {
           status: 200,
         })
       }
 
-      return new Response('Not found', { status: 404 })
+      if (url.includes('/api/users/user-123/saved-trials')) {
+        return new Response(JSON.stringify({ saved_trials: [] }), { status: 200 })
+      }
+
+      if (url.includes('/api/notifications/vapid-public-key')) {
+        return new Response(JSON.stringify({ public_key: 'BMockPublicKey' }), {
+          status: 200,
+        })
+      }
+
+      return new Response(`Not found: ${url}`, { status: 404 })
     })
 
     renderWithQueryClient(<Dashboard />)
@@ -54,6 +68,11 @@ describe('Dashboard', () => {
     })
 
     expect(
+      await screen.findByRole('heading', { name: /your profile/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('HER2+')).toBeInTheDocument()
+    expect(screen.getByText('Trastuzumab')).toBeInTheDocument()
+    expect(
       await screen.findByRole('heading', { name: /recommended trials/i }),
     ).toBeInTheDocument()
     expect(
@@ -61,5 +80,48 @@ describe('Dashboard', () => {
         name: /phase 2 study of trastuzumab deruxtecan/i,
       }),
     ).toBeInTheDocument()
+  })
+
+  it('loads saved profile values into the edit form', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem(USER_ID_KEY, 'user-123')
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+
+      if (url.includes('/api/users/profile/user-123') && !init?.method) {
+        return new Response(JSON.stringify(sampleProfile), { status: 200 })
+      }
+
+      if (url.includes('/api/matches/user-123')) {
+        return new Response(JSON.stringify({ matches: [sampleMatch] }), {
+          status: 200,
+        })
+      }
+
+      if (url.includes('/api/users/user-123/saved-trials')) {
+        return new Response(JSON.stringify({ saved_trials: [] }), { status: 200 })
+      }
+
+      if (url.includes('/api/notifications/vapid-public-key')) {
+        return new Response(JSON.stringify({ public_key: 'BMockPublicKey' }), {
+          status: 200,
+        })
+      }
+
+      return new Response(`Not found: ${url}`, { status: 404 })
+    })
+
+    renderWithQueryClient(<Dashboard />)
+
+    expect(await screen.findByText('HER2+')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^edit$/i }))
+
+    expect(await screen.findByLabelText(/^age$/i)).toHaveValue(45)
+    expect(screen.getByLabelText(/cancer stage/i)).toHaveValue('III')
+    expect(screen.getByLabelText(/current or most recent treatment/i)).toHaveValue(
+      'trastuzumab',
+    )
+    expect(screen.getByLabelText(/max travel distance/i)).toHaveValue(100)
   })
 })
