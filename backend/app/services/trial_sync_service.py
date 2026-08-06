@@ -191,4 +191,31 @@ def sync_clinical_trials(
     from app.services.trial_match_loader import clear_candidate_cache
 
     clear_candidate_cache()
+
+    if result.events:
+        _maybe_notify_saved_trial_changes(db, result.events)
+
     return result
+
+
+def _maybe_notify_saved_trial_changes(db: Session, events: list) -> None:
+    """Best-effort browser push for users watching changed trials."""
+    from app.core.config import settings
+    from app.services.change_notifier import notify_saved_trial_changes
+    from app.services.notifications.factory import build_notification_service
+    from app.services.profile_cipher import ProfileCipher
+
+    if not settings.profile_encryption_key or not settings.vapid_private_key:
+        return
+    try:
+        cipher = ProfileCipher(settings.profile_encryption_key)
+        notify_saved_trial_changes(
+            db, cipher, events, build_notification_service()
+        )
+    except Exception:
+        # Sync must succeed even if notifications fail.
+        import logging
+
+        logging.getLogger(__name__).exception(
+            "Saved-trial change notifications failed after sync"
+        )
