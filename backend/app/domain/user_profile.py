@@ -14,6 +14,7 @@ class CancerStage(StrEnum):
 
 
 class NotificationChannel(StrEnum):
+    BROWSER = "browser"
     EMAIL = "email"
     TELEGRAM = "telegram"
 
@@ -114,7 +115,7 @@ class UserProfileCreate(BaseModel):
     brain_metastasis: BrainMetastasisStatus = BrainMetastasisStatus.UNKNOWN
     # Miles to match US audience + ClinicalTrials.gov filter.geo examples (e.g. 50mi).
     max_travel_distance_miles: int = Field(ge=0, le=10_000, default=50)
-    notification_channels: list[NotificationChannel] = Field(min_length=1, max_length=2)
+    notification_channels: list[NotificationChannel] = Field(min_length=1, max_length=3)
 
     @field_validator("current_treatment", mode="before")
     @classmethod

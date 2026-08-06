@@ -81,3 +81,56 @@ def test_get_trial_detail_returns_404_for_unknown_nct_id(db_session: Session):
     response = client.get("/api/trials/NCT99999999")
 
     assert response.status_code == 404
+
+
+def test_get_trial_history_returns_change_events_newest_first(db_session: Session):
+    from app.infrastructure.models import TrialChangeEventModel
+
+    seed_trial(db_session)
+    db_session.add_all(
+        [
+            TrialChangeEventModel(
+                nct_id="NCT01234567",
+                event_type="status_changed",
+                old_value="NOT_YET_RECRUITING",
+                new_value="RECRUITING",
+                detected_at=datetime(2026, 1, 10, tzinfo=UTC),
+            ),
+            TrialChangeEventModel(
+                nct_id="NCT01234567",
+                event_type="enrollment_changed",
+                old_value="100",
+                new_value="120",
+                detected_at=datetime(2026, 2, 1, tzinfo=UTC),
+            ),
+        ]
+    )
+    db_session.commit()
+    client = make_client(db_session)
+
+    response = client.get("/api/trials/NCT01234567/history")
+
+    assert response.status_code == 200
+    events = response.json()["events"]
+    assert len(events) == 2
+    assert events[0]["event_type"] == "enrollment_changed"
+    assert events[0]["new_value"] == "120"
+    assert events[1]["event_type"] == "status_changed"
+
+
+def test_get_trial_history_returns_empty_list_when_no_changes(db_session: Session):
+    seed_trial(db_session)
+    client = make_client(db_session)
+
+    response = client.get("/api/trials/NCT01234567/history")
+
+    assert response.status_code == 200
+    assert response.json()["events"] == []
+
+
+def test_get_trial_history_returns_404_for_unknown_trial(db_session: Session):
+    client = make_client(db_session)
+
+    response = client.get("/api/trials/NCT99999999/history")
+
+    assert response.status_code == 404

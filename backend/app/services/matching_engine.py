@@ -24,6 +24,7 @@ from app.domain.user_profile import (
     TREATMENT_MATCH_TERMS,
     UserProfile,
 )
+from app.services.doctor_handoff import attach_doctor_handoff
 from app.services.geo import get_zip_geocoder, nearest_site_distance_miles
 
 # Require at least ~2 extracted fields before trusting age for hard exclude.
@@ -245,7 +246,10 @@ class MatchingEngine:
         self, user_profile: UserProfile, trials: list[ClinicalTrial], limit: int = 10
     ) -> list[MatchScore]:
         scores = [
-            self._strategy.calculate_compatibility(user_profile, trial) for trial in trials
+            attach_doctor_handoff(
+                self._strategy.calculate_compatibility(user_profile, trial)
+            )
+            for trial in trials
         ]
         scores = [score for score in scores if score.total > 0]
         # Max travel distance is a hard preference once we can measure it.

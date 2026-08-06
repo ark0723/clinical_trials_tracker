@@ -7,7 +7,7 @@ domain/API layer).
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.clinical_trial import TrialChangeEventType, TrialPhase, TrialStatus
@@ -90,3 +90,33 @@ class UserProfileModel(Base):
     encrypted_health_data: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class SavedTrialModel(Base):
+    __tablename__ = "saved_trials"
+    __table_args__ = (
+        UniqueConstraint("user_id", "nct_id", name="uq_saved_trials_user_nct"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("user_profiles.id", ondelete="CASCADE"), index=True
+    )
+    nct_id: Mapped[str] = mapped_column(
+        String(20), ForeignKey("clinical_trials.nct_id", ondelete="CASCADE"), index=True
+    )
+    status_at_save: Mapped[str] = mapped_column(String(30))
+    saved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class PushSubscriptionModel(Base):
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("user_profiles.id", ondelete="CASCADE"), index=True
+    )
+    endpoint: Mapped[str] = mapped_column(Text, unique=True)
+    p256dh: Mapped[str] = mapped_column(Text)
+    auth: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
