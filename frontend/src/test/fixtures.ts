@@ -11,7 +11,7 @@ export const sampleProfile: UserProfile = {
   ecog: 1,
   brain_metastasis: 'no',
   max_travel_distance_miles: 100,
-  notification_channels: ['email'],
+  notification_channels: ['browser'],
 }
 
 export const sampleMatch: MatchScore = {
@@ -50,4 +50,13 @@ export const sampleMatch: MatchScore = {
   confidence: 0.78,
   rationale:
     'This trial targets HER2-positive breast cancer and your age fits the stated range. ECOG status could not be verified from your profile.',
+  things_to_confirm: [
+    'Age: unable to verify',
+    'Required prior treatment',
+  ],
+  questions_for_doctor: [
+    'Is my age within the range this trial lists?',
+    'Have I completed the prior therapies this trial requires?',
+    'What is my current ECOG performance status?',
+  ],
 }

@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
-import { createProfile, getMatches, updateProfile } from '../api/client'
+import { createProfile, getMatches, listSavedTrials, updateProfile } from '../api/client'
 import type { UserProfileCreate } from '../api/types'
 import { MatchResults } from './MatchResults'
 import { ProfileForm } from './ProfileForm'
+import { PushAlerts } from './PushAlerts'
 
 const USER_ID_KEY = 'clinical_tracker_user_id'
 
@@ -25,6 +26,12 @@ export function Dashboard() {
   const matchesQuery = useQuery({
     queryKey: ['matches', userId],
     queryFn: () => getMatches(userId!),
+    enabled: Boolean(userId) && !isEditingProfile,
+  })
+
+  const savedTrialsQuery = useQuery({
+    queryKey: ['saved-trials', userId],
+    queryFn: () => listSavedTrials(userId!),
     enabled: Boolean(userId) && !isEditingProfile,
   })
 
@@ -92,20 +99,38 @@ export function Dashboard() {
       </section>
 
       {userId && !isEditingProfile ? (
-        <section className="dashboard__section">
-          <header className="section-header">
-            <h2>Recommended trials</h2>
-          </header>
-          <p className="section-intro">
-            Matches are ranked by compatibility, then nearer sites. Trials beyond
-            your max travel distance are hidden when site coordinates are known.
-          </p>
-          <MatchResults
-            matches={matchesQuery.data?.matches ?? []}
-            isLoading={matchesQuery.isLoading}
-            error={matchesQuery.error}
-          />
-        </section>
+        <>
+          <section className="dashboard__section">
+            <header className="section-header">
+              <h2>Browser alerts</h2>
+            </header>
+            <PushAlerts userId={userId} />
+          </section>
+          <section className="dashboard__section">
+            <header className="section-header">
+              <h2>Recommended trials</h2>
+            </header>
+            <p className="section-intro">
+              Matches are ranked by compatibility, then nearer sites. Trials beyond
+              your max travel distance are hidden when site coordinates are known.
+              Save trials to monitor later. These are potentially relevant options —
+              not enrollment advice.
+            </p>
+            <MatchResults
+              matches={matchesQuery.data?.matches ?? []}
+              isLoading={matchesQuery.isLoading}
+              error={matchesQuery.error}
+              userId={userId}
+              savedNctIds={
+                new Set(
+                  (savedTrialsQuery.data?.saved_trials ?? []).map(
+                    (trial) => trial.nct_id,
+                  ),
+                )
+              }
+            />
+          </section>
+        </>
       ) : null}
     </div>
   )

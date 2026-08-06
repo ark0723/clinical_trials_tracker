@@ -58,8 +58,10 @@ export function ProfileForm({
   const [maxTravelMiles, setMaxTravelMiles] = useState(
     String(initialProfile?.max_travel_distance_miles ?? 50),
   )
-  const [emailNotifications, setEmailNotifications] = useState(
-    initialProfile?.notification_channels.includes('email') ?? true,
+  const [browserNotifications, setBrowserNotifications] = useState(
+    initialProfile?.notification_channels.includes('browser') ??
+      initialProfile?.notification_channels.includes('email') ??
+      true,
   )
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -75,7 +77,7 @@ export function ProfileForm({
       ecog: ecog === 'unknown' ? null : (Number(ecog) as EcogStatus),
       brain_metastasis: brainMetastasis,
       max_travel_distance_miles: Number(maxTravelMiles),
-      notification_channels: emailNotifications ? ['email'] : [],
+      notification_channels: ['browser'],
     }
 
     await onSubmit(payload)
@@ -208,18 +210,23 @@ export function ProfileForm({
       </div>
 
       <div className="form-field form-field--checkbox">
-        <label htmlFor="profile-email">
+        <label htmlFor="profile-browser-push">
           <input
-            id="profile-email"
+            id="profile-browser-push"
             type="checkbox"
-            checked={emailNotifications}
-            onChange={(event) => setEmailNotifications(event.target.checked)}
+            checked={browserNotifications}
+            onChange={(event) => setBrowserNotifications(event.target.checked)}
           />
-          Email notifications
+          Browser push alerts for saved trials
         </label>
+        <p className="field-hint">
+          Works on desktop and Android browsers. On iPhone/iPad, add this app to
+          your Home Screen (Safari) to receive pushes. Email and Telegram come
+          later.
+        </p>
       </div>
 
-      <button type="submit" disabled={isSubmitting || !her2Positive || !emailNotifications}>
+      <button type="submit" disabled={isSubmitting || !her2Positive || !browserNotifications}>
         Save profile
       </button>
     </form>

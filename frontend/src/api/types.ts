@@ -1,6 +1,6 @@
 export type CancerStage = 'I' | 'II' | 'III' | 'IV'
 
-export type NotificationChannel = 'email' | 'telegram'
+export type NotificationChannel = 'browser' | 'email' | 'telegram'
 
 export type CurrentTreatment =
   | 'trastuzumab'
@@ -90,11 +90,21 @@ export interface MatchScore {
   confidence: number
   rationale: string
   nearest_site_miles?: number | null
+  things_to_confirm?: string[]
+  questions_for_doctor?: string[]
+}
+
+export interface SavedTrial {
+  user_id: string
+  nct_id: string
+  status_at_save: string
+  saved_at: string
 }
 
 export interface MatchesResponse {
   matches: MatchScore[]
 }
+
 
 export const CURRENT_TREATMENT_OPTIONS: {
   value: CurrentTreatment

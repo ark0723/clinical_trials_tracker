@@ -1,8 +1,13 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+
+import { saveTrial, unsaveTrial } from '../api/client'
 import type { MatchScore, TrialLocation } from '../api/types'
 import { formatPhase, formatStatus } from '../utils/format'
 
 interface MatchCardProps {
   match: MatchScore
+  userId: string
+  isSaved: boolean
 }
 
 const MAX_VISIBLE_SITES = 5
@@ -14,7 +19,7 @@ function CriteriaList({
 }: {
   title: string
   items: string[]
-  variant: 'matched' | 'missing' | 'unknown'
+  variant: 'matched' | 'missing' | 'unknown' | 'handoff'
 }) {
   if (items.length === 0) {
     return null
@@ -66,10 +71,26 @@ function SiteList({ locations }: { locations: TrialLocation[] }) {
   )
 }
 
-export function MatchCard({ match }: MatchCardProps) {
+export function MatchCard({ match, userId, isSaved }: MatchCardProps) {
+  const queryClient = useQueryClient()
   const scorePercent = Math.round(match.total * 100)
   const confidencePercent = Math.round(match.confidence * 100)
   const locations = match.trial.locations ?? []
+  const summary = match.trial.eligibility_criteria_simplified
+  const questions = match.questions_for_doctor ?? []
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (isSaved) {
+        await unsaveTrial(userId, match.trial.nct_id)
+        return
+      }
+      await saveTrial(userId, match.trial.nct_id)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saved-trials', userId] })
+    },
+  })
 
   return (
     <article className="match-card">
@@ -85,6 +106,26 @@ export function MatchCard({ match }: MatchCardProps) {
           ? ` · ~${Math.round(match.nearest_site_miles)} mi to nearest site`
           : ''}
       </p>
+
+      <button
+        type="button"
+        className="button-secondary match-card__save"
+        onClick={() => saveMutation.mutate()}
+        disabled={saveMutation.isPending}
+      >
+        {isSaved ? 'Remove from saved' : 'Save trial'}
+      </button>
+
+      {summary ? (
+        <section className="match-card__understanding" aria-label="Trial understanding">
+          <h4>What this trial is looking for</h4>
+          <p>{summary}</p>
+          <p className="match-card__disclaimer">
+            Potentially relevant based on your profile — not a recommendation to
+            enroll. Discuss with your care team.
+          </p>
+        </section>
+      ) : null}
 
       <SiteList locations={locations} />
 
@@ -102,6 +143,11 @@ export function MatchCard({ match }: MatchCardProps) {
         title="Unable to verify"
         items={match.unknown_criteria}
         variant="unknown"
+      />
+      <CriteriaList
+        title="Questions for your doctor"
+        items={questions}
+        variant="handoff"
       />
 
       <p className="match-card__rationale">{match.rationale}</p>

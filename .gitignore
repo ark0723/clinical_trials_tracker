@@ -23,5 +23,8 @@ dist-ssr/
 .idea/
 .DS_Store
 
+# Vercel
+.vercel/
+
 # docs
 docs/*

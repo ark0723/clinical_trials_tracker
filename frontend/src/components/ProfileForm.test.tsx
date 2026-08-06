@@ -18,7 +18,7 @@ describe('ProfileForm', () => {
     expect(screen.getByRole('combobox', { name: /^ECOG performance status$/i })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: /^Brain metastases$/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/max travel distance/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/email notifications/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/browser push alerts/i)).toBeInTheDocument()
   })
 
   it('exposes definitions for ECOG and brain metastases', () => {
@@ -66,7 +66,7 @@ describe('ProfileForm', () => {
       ecog: 1,
       brain_metastasis: 'no',
       max_travel_distance_miles: 50,
-      notification_channels: ['email'],
+      notification_channels: ['browser'],
     })
   })
 })

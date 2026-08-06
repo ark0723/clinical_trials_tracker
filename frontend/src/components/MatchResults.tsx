@@ -5,9 +5,17 @@ interface MatchResultsProps {
   matches: MatchScore[]
   isLoading: boolean
   error: Error | null
+  userId: string
+  savedNctIds: Set<string>
 }
 
-export function MatchResults({ matches, isLoading, error }: MatchResultsProps) {
+export function MatchResults({
+  matches,
+  isLoading,
+  error,
+  userId,
+  savedNctIds,
+}: MatchResultsProps) {
   if (isLoading) {
     return <p className="status-message">Loading trial matches…</p>
   }
@@ -32,7 +40,12 @@ export function MatchResults({ matches, isLoading, error }: MatchResultsProps) {
   return (
     <div className="match-results">
       {matches.map((match) => (
-        <MatchCard key={match.trial.nct_id} match={match} />
+        <MatchCard
+          key={match.trial.nct_id}
+          match={match}
+          userId={userId}
+          isSaved={savedNctIds.has(match.trial.nct_id)}
+        />
       ))}
     </div>
   )
