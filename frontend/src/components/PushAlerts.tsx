@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import {
   getVapidPublicKey,
@@ -11,34 +11,87 @@ interface PushAlertsProps {
   userId: string
 }
 
+let cachedVapidPublicKey: string | null = null
+let vapidPublicKeyPromise: Promise<string> | null = null
+let serviceWorkerReadyPromise: Promise<ServiceWorkerRegistration> | null = null
+
+function prefetchVapidPublicKey(): Promise<string> {
+  if (cachedVapidPublicKey) {
+    return Promise.resolve(cachedVapidPublicKey)
+  }
+  if (!vapidPublicKeyPromise) {
+    vapidPublicKeyPromise = getVapidPublicKey()
+      .then(({ public_key }) => {
+        cachedVapidPublicKey = public_key
+        return public_key
+      })
+      .catch((error) => {
+        vapidPublicKeyPromise = null
+        throw error
+      })
+  }
+  return vapidPublicKeyPromise
+}
+
+function ensureServiceWorker(): Promise<ServiceWorkerRegistration> {
+  if (!('serviceWorker' in navigator)) {
+    return Promise.reject(new Error('Service workers are not supported.'))
+  }
+  if (!serviceWorkerReadyPromise) {
+    serviceWorkerReadyPromise = navigator.serviceWorker
+      .register('/sw.js')
+      .then(() => navigator.serviceWorker.ready)
+      .catch((error) => {
+        serviceWorkerReadyPromise = null
+        throw error
+      })
+  }
+  return serviceWorkerReadyPromise
+}
+
 export function PushAlerts({ userId }: PushAlertsProps) {
   const [status, setStatus] = useState<string | null>(null)
   const [isBusy, setIsBusy] = useState(false)
 
+  useEffect(() => {
+    // Warm the slow parts before the user clicks Enable.
+    void prefetchVapidPublicKey().catch(() => undefined)
+    if ('serviceWorker' in navigator) {
+      void ensureServiceWorker().catch(() => undefined)
+    }
+  }, [])
+
   async function enablePush() {
     setIsBusy(true)
-    setStatus(null)
+    setStatus('Preparing browser push…')
     try {
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         setStatus('Browser push is not supported in this browser.')
         return
       }
 
+      setStatus('Waiting for notification permission…')
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
         setStatus('Notification permission was not granted.')
         return
       }
 
-      const registration = await navigator.serviceWorker.register('/sw.js')
-      await navigator.serviceWorker.ready
+      setStatus('Finishing subscription…')
+      const [publicKey, registration] = await Promise.all([
+        prefetchVapidPublicKey(),
+        ensureServiceWorker(),
+      ])
 
-      const { public_key } = await getVapidPublicKey()
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(public_key),
-      })
+      const existing = await registration.pushManager.getSubscription()
+      const subscription =
+        existing ??
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        }))
 
+      setStatus('Saving subscription…')
       await registerPushSubscription(userId, subscriptionToPayload(subscription))
       setStatus('Browser push enabled for saved-trial updates.')
     } catch (error) {
@@ -73,7 +126,8 @@ export function PushAlerts({ userId }: PushAlertsProps) {
     <div className="push-alerts">
       <p className="section-intro">
         Enable browser notifications to learn when a saved trial changes status
-        (connected to sync change detection).
+        after sync detects an update. Use Send test notification to verify this
+        device without waiting for a trial change.
       </p>
       <div className="push-alerts__actions">
         <button
