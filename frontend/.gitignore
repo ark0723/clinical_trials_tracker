@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Vercel / env (keep .env.example tracked)
+.vercel
+.env
+.env.local
+.env.*.local

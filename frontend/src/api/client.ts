@@ -24,6 +24,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      // Free ngrok interstitial otherwise blocks browser fetch to the API.
+      ...(API_BASE.includes('ngrok')
+        ? { 'ngrok-skip-browser-warning': 'true' }
+        : {}),
       ...options?.headers,
     },
   })
