@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_db_session, get_profile_cipher
 from app.domain.clinical_trial import TrialPhase, TrialStatus
-from app.infrastructure.models import ClinicalTrialModel, StructuredEligibilityModel, TrialLocationModel
+from app.infrastructure.models import (
+    ClinicalTrialModel,
+    StructuredEligibilityModel,
+    TrialLocationModel,
+)
 from app.main import app
 from app.services.profile_cipher import ProfileCipher
 from app.services.trial_match_loader import clear_candidate_cache

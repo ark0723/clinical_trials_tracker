@@ -19,9 +19,9 @@ from app.domain.clinical_trial import ClinicalTrial
 from app.domain.eligibility import StructuredEligibility
 from app.domain.matching import MatchScore
 from app.domain.user_profile import (
+    TREATMENT_MATCH_TERMS,
     BrainMetastasisStatus,
     CurrentTreatment,
-    TREATMENT_MATCH_TERMS,
     UserProfile,
 )
 from app.services.doctor_handoff import attach_doctor_handoff

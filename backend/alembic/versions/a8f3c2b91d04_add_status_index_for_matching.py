@@ -1,6 +1,6 @@
 """Add index on clinical_trials.status for active-trial matching queries."""
 
-from typing import Sequence
+from collections.abc import Sequence
 
 from alembic import op
 

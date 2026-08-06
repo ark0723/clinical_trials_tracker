@@ -1,8 +1,9 @@
 """Add saved_trials table for monitoring subscriptions."""
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "b1c4e8f02a11"

@@ -1,6 +1,6 @@
 """Saved-trial subscriptions for monitoring (Patient Journey Platform)."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 

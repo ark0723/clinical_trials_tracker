@@ -1,6 +1,11 @@
 from sqlalchemy.orm import Session
 
-from app.domain.user_profile import CancerStage, CurrentTreatment, NotificationChannel, UserProfileCreate
+from app.domain.user_profile import (
+    CancerStage,
+    CurrentTreatment,
+    NotificationChannel,
+    UserProfileCreate,
+)
 from app.infrastructure.models import UserProfileModel
 from app.services.profile_cipher import ProfileCipher
 from app.services.user_profile_service import (

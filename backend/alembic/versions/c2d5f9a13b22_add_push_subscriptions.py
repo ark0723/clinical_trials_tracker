@@ -1,8 +1,9 @@
 """Add push_subscriptions for browser Web Push."""
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "c2d5f9a13b22"
