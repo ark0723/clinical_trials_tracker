@@ -17,6 +17,24 @@ class PushRecipient:
     auth: str
 
 
+def normalize_vapid_private_key(raw: str) -> str:
+    """Accept PEM with real or escaped newlines, or a raw urlsafe key."""
+    key = raw.strip().strip("'").strip('"')
+    if "\\n" in key:
+        key = key.replace("\\n", "\n")
+    return key
+
+
+def vapid_private_key_for_webpush(raw: str) -> Any:
+    """Return a py_vapid.Vapid instance for PEM, else the raw key string."""
+    key = normalize_vapid_private_key(raw)
+    if "BEGIN" in key:
+        from py_vapid import Vapid
+
+        return Vapid.from_pem(key.encode("utf-8"))
+    return key
+
+
 class BrowserPushProvider(NotificationProvider):
     """Sends Web Push notifications via pywebpush."""
 
@@ -27,7 +45,7 @@ class BrowserPushProvider(NotificationProvider):
         vapid_claims_email: str,
         webpush_fn: Any | None = None,
     ):
-        self._vapid_private_key = vapid_private_key
+        self._vapid_private_key = vapid_private_key_for_webpush(vapid_private_key)
         self._vapid_claims = {"sub": vapid_claims_email}
         self._webpush = webpush_fn
 

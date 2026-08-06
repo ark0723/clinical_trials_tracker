@@ -9,7 +9,7 @@ from app.api.trials import router as trials_router
 from app.api.users import router as users_router
 from app.core.config import settings
 from app.infrastructure.db import SessionLocal
-from app.services.trial_match_loader import get_cached_active_match_trials
+from app.services.trial_match_loader import get_cached_match_trials
 
 
 @asynccontextmanager
@@ -17,7 +17,7 @@ async def lifespan(_app: FastAPI):
     # Warm the lean trial cache so the first dashboard match request is fast.
     session = SessionLocal()
     try:
-        get_cached_active_match_trials(session)
+        get_cached_match_trials(session)
     except Exception:
         # Startup must not fail if Neon is briefly unreachable; first request will retry.
         pass

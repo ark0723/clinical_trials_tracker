@@ -31,12 +31,18 @@ def make_client(db_session: Session, profile_cipher: ProfileCipher) -> TestClien
     return TestClient(app)
 
 
-def seed_recruiting_trial(db_session: Session, nct_id: str = "NCT01234567") -> None:
+def seed_trial(
+    db_session: Session,
+    *,
+    nct_id: str,
+    status: TrialStatus,
+    title: str | None = None,
+) -> None:
     trial = ClinicalTrialModel(
         nct_id=nct_id,
-        title="HER2+ recruiting study",
+        title=title or f"{status.value} study",
         phase=TrialPhase.PHASE_2,
-        status=TrialStatus.RECRUITING,
+        status=status,
         eligibility_criteria_raw="Age >= 18 and <= 75. HER2-positive breast cancer.",
         enrollment_count=120,
         has_results=False,
@@ -66,13 +72,8 @@ def seed_recruiting_trial(db_session: Session, nct_id: str = "NCT01234567") -> N
     db_session.commit()
 
 
-def test_get_matches_returns_ranked_results_for_existing_profile(
-    db_session: Session,
-    profile_cipher: ProfileCipher,
-):
-    client = make_client(db_session, profile_cipher)
-    seed_recruiting_trial(db_session)
-    created = client.post(
+def _create_profile(client: TestClient) -> str:
+    return client.post(
         "/api/users/profile",
         json={
             "age": 45,
@@ -85,9 +86,23 @@ def test_get_matches_returns_ranked_results_for_existing_profile(
             "max_travel_distance_miles": 100,
             "notification_channels": ["email"],
         },
-    ).json()
+    ).json()["id"]
 
-    response = client.get(f"/api/matches/{created['id']}")
+
+def test_get_matches_returns_ranked_results_for_existing_profile(
+    db_session: Session,
+    profile_cipher: ProfileCipher,
+):
+    client = make_client(db_session, profile_cipher)
+    seed_trial(
+        db_session,
+        nct_id="NCT01234567",
+        status=TrialStatus.RECRUITING,
+        title="HER2+ recruiting study",
+    )
+    user_id = _create_profile(client)
+
+    response = client.get(f"/api/matches/{user_id}")
 
     assert response.status_code == 200
     matches = response.json()["matches"]
@@ -104,7 +119,48 @@ def test_get_matches_returns_404_for_unknown_user(
 ):
     client = make_client(db_session, profile_cipher)
 
-    response = client.get("/api/matches/missing-user")
+    response = client.get("/api/matches/does-not-exist")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "User profile not found"}
+
+
+def test_default_matches_exclude_enrolling_by_invitation(
+    db_session: Session,
+    profile_cipher: ProfileCipher,
+):
+    client = make_client(db_session, profile_cipher)
+    seed_trial(
+        db_session,
+        nct_id="NCT-INVITE",
+        status=TrialStatus.ENROLLING_BY_INVITATION,
+    )
+    seed_trial(db_session, nct_id="NCT-RECRUIT", status=TrialStatus.RECRUITING)
+    user_id = _create_profile(client)
+
+    response = client.get(f"/api/matches/{user_id}")
+
+    assert response.status_code == 200
+    nct_ids = [m["trial"]["nct_id"] for m in response.json()["matches"]]
+    assert "NCT-RECRUIT" in nct_ids
+    assert "NCT-INVITE" not in nct_ids
+
+
+def test_matches_can_include_completed_via_status_filter(
+    db_session: Session,
+    profile_cipher: ProfileCipher,
+):
+    client = make_client(db_session, profile_cipher)
+    seed_trial(db_session, nct_id="NCT-DONE", status=TrialStatus.COMPLETED)
+    user_id = _create_profile(client)
+
+    default_response = client.get(f"/api/matches/{user_id}")
+    assert default_response.json()["matches"] == []
+
+    response = client.get(
+        f"/api/matches/{user_id}",
+        params=[("statuses", "COMPLETED")],
+    )
+
+    assert response.status_code == 200
+    nct_ids = [m["trial"]["nct_id"] for m in response.json()["matches"]]
+    assert nct_ids == ["NCT-DONE"]

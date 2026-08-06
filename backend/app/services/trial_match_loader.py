@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.domain.clinical_trial import ClinicalTrial, TrialLocation, TrialPhase, TrialStatus
 from app.domain.eligibility import StructuredEligibility
+from app.domain.trial_status_ux import PATIENT_DEFAULT_STATUSES
 from app.domain.user_profile import UserProfile
 from app.infrastructure.models import (
     ClinicalTrialModel,
@@ -24,12 +25,6 @@ from app.infrastructure.models import (
 )
 from app.services.matching_engine import is_hard_excluded
 
-_ACTIVE_STATUSES = {
-    TrialStatus.RECRUITING,
-    TrialStatus.NOT_YET_RECRUITING,
-    TrialStatus.ENROLLING_BY_INVITATION,
-}
-
 # Daily sync is the source of truth; a few minutes of staleness is acceptable for MVP.
 _DEFAULT_TTL_SECONDS = 300.0
 
@@ -37,6 +32,7 @@ _DEFAULT_TTL_SECONDS = 300.0
 @dataclass
 class _CacheEntry:
     trials: list[ClinicalTrial]
+    statuses: frozenset[TrialStatus]
     loaded_at: float
 
 
@@ -56,8 +52,12 @@ def clear_candidate_cache() -> None:
         _cache_entry = None
 
 
-def load_active_match_trials(db: Session) -> list[ClinicalTrial]:
+def load_match_trials(
+    db: Session,
+    statuses: frozenset[TrialStatus] | set[TrialStatus] | None = None,
+) -> list[ClinicalTrial]:
     """Load scoring columns plus site coordinates (no raw eligibility text)."""
+    status_filter = frozenset(statuses) if statuses is not None else PATIENT_DEFAULT_STATUSES
     trial = ClinicalTrialModel
     se = StructuredEligibilityModel
 
@@ -80,7 +80,7 @@ def load_active_match_trials(db: Session) -> list[ClinicalTrial]:
             se.extraction_method,
         )
         .outerjoin(se, trial.nct_id == se.nct_id)
-        .where(trial.status.in_(_ACTIVE_STATUSES))
+        .where(trial.status.in_(status_filter))
     )
     rows = db.execute(stmt).all()
     nct_ids = [row.nct_id for row in rows]
@@ -88,25 +88,51 @@ def load_active_match_trials(db: Session) -> list[ClinicalTrial]:
     return [_row_to_matching_trial(row, locations_by_nct.get(row.nct_id, [])) for row in rows]
 
 
-def get_cached_active_match_trials(db: Session) -> list[ClinicalTrial]:
-    """Return active lean trials, refreshing the process cache when stale."""
+def load_active_match_trials(db: Session) -> list[ClinicalTrial]:
+    """Backward-compatible alias for patient-default status candidates."""
+    return load_match_trials(db, PATIENT_DEFAULT_STATUSES)
+
+
+def get_cached_match_trials(
+    db: Session,
+    statuses: frozenset[TrialStatus] | set[TrialStatus] | None = None,
+) -> list[ClinicalTrial]:
+    """Return lean trials for the status set, refreshing cache when stale."""
     global _cache_entry
+    status_key = frozenset(statuses) if statuses is not None else PATIENT_DEFAULT_STATUSES
     now = time.monotonic()
 
     with _cache_lock:
-        if _cache_entry is not None and (now - _cache_entry.loaded_at) < _cache_ttl_seconds:
+        if (
+            _cache_entry is not None
+            and _cache_entry.statuses == status_key
+            and (now - _cache_entry.loaded_at) < _cache_ttl_seconds
+        ):
             return _cache_entry.trials
 
-    trials = load_active_match_trials(db)
+    trials = load_match_trials(db, status_key)
 
     with _cache_lock:
-        _cache_entry = _CacheEntry(trials=trials, loaded_at=time.monotonic())
+        _cache_entry = _CacheEntry(
+            trials=trials,
+            statuses=status_key,
+            loaded_at=time.monotonic(),
+        )
         return _cache_entry.trials
 
 
-def fetch_candidate_trials(db: Session, user_profile: UserProfile) -> list[ClinicalTrial]:
-    """Return cached active trials that are not hard-excluded for this profile."""
-    trials = get_cached_active_match_trials(db)
+def get_cached_active_match_trials(db: Session) -> list[ClinicalTrial]:
+    """Backward-compatible alias for patient-default cached candidates."""
+    return get_cached_match_trials(db, PATIENT_DEFAULT_STATUSES)
+
+
+def fetch_candidate_trials(
+    db: Session,
+    user_profile: UserProfile,
+    statuses: frozenset[TrialStatus] | set[TrialStatus] | None = None,
+) -> list[ClinicalTrial]:
+    """Return cached trials for statuses that are not hard-excluded for this profile."""
+    trials = get_cached_match_trials(db, statuses)
     return [trial for trial in trials if not is_hard_excluded(user_profile, trial)]
 
 
