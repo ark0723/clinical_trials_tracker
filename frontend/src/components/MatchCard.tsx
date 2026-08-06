@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { saveTrial, unsaveTrial } from '../api/client'
 import type { MatchScore, TrialLocation } from '../api/types'
-import { formatPhase, formatStatus } from '../utils/format'
+import { formatPhase, formatStatus, statusMeaning } from '../utils/format'
 
 interface MatchCardProps {
   match: MatchScore
@@ -105,6 +105,10 @@ export function MatchCard({ match, userId, isSaved }: MatchCardProps) {
         {match.nearest_site_miles != null
           ? ` · ~${Math.round(match.nearest_site_miles)} mi to nearest site`
           : ''}
+      </p>
+      <p className="match-card__status-meaning">
+        <span className="match-card__status-meaning-label">What this means:</span>{' '}
+        {statusMeaning(match.trial.status)}
       </p>
 
       <button

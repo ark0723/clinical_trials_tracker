@@ -194,8 +194,20 @@ button:disabled {
 }
 
 .match-card__meta {
-  margin: 0.35rem 0 0.85rem;
+  margin: 0.35rem 0 0.35rem;
   font-size: 0.85rem;
+  color: var(--text);
+}
+
+.match-card__status-meaning {
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.match-card__status-meaning-label {
+  font-weight: 600;
   color: var(--text);
 }
 
@@ -316,4 +328,49 @@ button:disabled {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.75rem;
+}
+
+.push-alerts__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.status-filter {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.status-filter legend {
+  padding: 0 0.25rem;
+  font-weight: 600;
+}
+
+.status-filter__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.status-filter__modes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.status-filter__mode,
+.status-filter__check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+}
+
+.status-filter__checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.35rem 0.75rem;
 }

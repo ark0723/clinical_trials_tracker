@@ -1,6 +1,10 @@
 import { useState } from 'react'
 
-import { getVapidPublicKey, registerPushSubscription } from '../api/client'
+import {
+  getVapidPublicKey,
+  registerPushSubscription,
+  sendTestPush,
+} from '../api/client'
 import { subscriptionToPayload, urlBase64ToUint8Array } from '../utils/push'
 
 interface PushAlertsProps {
@@ -48,20 +52,47 @@ export function PushAlerts({ userId }: PushAlertsProps) {
     }
   }
 
+  async function testPush() {
+    setIsBusy(true)
+    setStatus(null)
+    try {
+      const result = await sendTestPush(userId)
+      setStatus(`Test notification sent (${result.sent}). Check this device.`)
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : 'Could not send test notification.',
+      )
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
   return (
     <div className="push-alerts">
       <p className="section-intro">
         Enable browser notifications to learn when a saved trial changes status
         (connected to sync change detection).
       </p>
-      <button
-        type="button"
-        className="button-secondary"
-        onClick={() => void enablePush()}
-        disabled={isBusy}
-      >
-        {isBusy ? 'Enabling…' : 'Enable browser push'}
-      </button>
+      <div className="push-alerts__actions">
+        <button
+          type="button"
+          className="button-secondary"
+          onClick={() => void enablePush()}
+          disabled={isBusy}
+        >
+          {isBusy ? 'Working…' : 'Enable browser push'}
+        </button>
+        <button
+          type="button"
+          className="button-secondary"
+          onClick={() => void testPush()}
+          disabled={isBusy}
+        >
+          Send test notification
+        </button>
+      </div>
       {status ? <p className="status-message">{status}</p> : null}
     </div>
   )

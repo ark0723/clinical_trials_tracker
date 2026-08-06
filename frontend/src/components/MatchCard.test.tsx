@@ -73,4 +73,15 @@ describe('MatchCard', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /save trial/i })).toBeInTheDocument()
   })
+
+  it('renders ClinicalTrials.gov status with plain-English meaning', () => {
+    renderWithQueryClient(
+      <MatchCard match={sampleMatch} userId="user-123" isSaved={false} />,
+    )
+
+    expect(screen.getByText(/Recruiting/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/currently looking for participants/i),
+    ).toBeInTheDocument()
+  })
 })

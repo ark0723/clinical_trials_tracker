@@ -67,10 +67,13 @@ export function updateProfile(
 export function getMatches(
   userId: string,
   limit = 10,
+  statuses?: string[],
 ): Promise<MatchesResponse> {
-  return request<MatchesResponse>(
-    `/api/matches/${userId}?limit=${limit}`,
-  )
+  const params = new URLSearchParams({ limit: String(limit) })
+  for (const status of statuses ?? []) {
+    params.append('statuses', status)
+  }
+  return request<MatchesResponse>(`/api/matches/${userId}?${params.toString()}`)
 }
 
 export function saveTrial(userId: string, nctId: string): Promise<SavedTrial> {
@@ -105,5 +108,13 @@ export function registerPushSubscription(
   return request(`/api/notifications/users/${userId}/subscriptions`, {
     method: 'POST',
     body: JSON.stringify(subscription),
+  })
+}
+
+export function sendTestPush(
+  userId: string,
+): Promise<{ sent: number; user_id: string }> {
+  return request(`/api/notifications/users/${userId}/test`, {
+    method: 'POST',
   })
 }

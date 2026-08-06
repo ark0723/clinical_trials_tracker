@@ -2,10 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { createProfile, getMatches, listSavedTrials, updateProfile } from '../api/client'
-import type { UserProfileCreate } from '../api/types'
+import type { TrialStatus, UserProfileCreate } from '../api/types'
 import { MatchResults } from './MatchResults'
 import { ProfileForm } from './ProfileForm'
 import { PushAlerts } from './PushAlerts'
+import { PATIENT_DEFAULT_STATUSES, StatusFilter } from './StatusFilter'
 
 const USER_ID_KEY = 'clinical_tracker_user_id'
 
@@ -22,10 +23,13 @@ export function Dashboard() {
   const [userId, setUserId] = useState<string | null>(() => readStoredUserId())
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<TrialStatus[]>([
+    ...PATIENT_DEFAULT_STATUSES,
+  ])
 
   const matchesQuery = useQuery({
-    queryKey: ['matches', userId],
-    queryFn: () => getMatches(userId!),
+    queryKey: ['matches', userId, statusFilter],
+    queryFn: () => getMatches(userId!, 10, statusFilter),
     enabled: Boolean(userId) && !isEditingProfile,
   })
 
@@ -114,8 +118,12 @@ export function Dashboard() {
               Matches are ranked by compatibility, then nearer sites. Trials beyond
               your max travel distance are hidden when site coordinates are known.
               Save trials to monitor later. These are potentially relevant options —
-              not enrollment advice.
+              not enrollment advice. Status labels match ClinicalTrials.gov.
             </p>
+            <StatusFilter
+              selected={statusFilter}
+              onChange={setStatusFilter}
+            />
             <MatchResults
               matches={matchesQuery.data?.matches ?? []}
               isLoading={matchesQuery.isLoading}
