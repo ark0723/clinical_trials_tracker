@@ -28,8 +28,9 @@ saved trials, monitoring/alerts — then AI understanding (paid tier), then
 LangGraph Navigator (with Planner) + MCP + evaluation, then personalized
 decision support and platform expansion.
 
-**Hosting path (decided):** ngrok (push experiments) → Vercel frontend for
-MVP testing → separate production deploys for frontend and backend.
+**Hosting path (decided):** Frontend on **Vercel**, API on **Fly.io**, DB on
+**Neon**. Daily trial sync stays on GitHub Actions. ngrok is only for local
+experiments.
 
 ## Project structure
 
@@ -56,13 +57,20 @@ cd backend && uv sync && uv run alembic upgrade head && uv run fastapi dev app/m
 cd frontend && npm install && npm run dev
 ```
 
-### Vercel (frontend MVP)
+### Production hosting (MVP)
 
-Deploy from `frontend/` (`vercel --prod`). Set build-time env
-`VITE_API_BASE_URL` to a publicly reachable API origin. On the API host, set
-`CORS_ORIGINS` to the Vercel URL (comma-separated). Until the backend is
-deployed separately, you can point `VITE_API_BASE_URL` at an ngrok tunnel to
-local FastAPI.
+| Layer | Host | Notes |
+|---|---|---|
+| Frontend | Vercel | `clinical-trial-navigator-one.vercel.app` |
+| API | Fly.io | `https://clinical-trial-navigator-api.fly.dev` |
+| Database | Neon | Pooled `DATABASE_URL` |
+
+Deploy API from `backend/` (`fly deploy`). Set Fly secrets for `DATABASE_URL`,
+`PROFILE_ENCRYPTION_KEY`, VAPID keys, and
+`CORS_ORIGINS=https://clinical-trial-navigator-one.vercel.app`.
+
+Deploy UI from `frontend/` (`vercel --prod`) with build-time
+`VITE_API_BASE_URL=https://clinical-trial-navigator-api.fly.dev`.
 
 ## Development principles
 

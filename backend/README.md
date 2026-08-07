@@ -177,3 +177,31 @@ tests/            # pytest tests (write tests first)
 
 - **TDD**: Write a failing test before implementation (Red → Green → Refactor).
 - **Clean Code**: Keep layers loosely coupled; put core business logic (e.g. matching) behind interfaces so implementations can be swapped (rule-based → ML later).
+
+## Fly.io deploy (production API)
+
+Config lives in this directory: `Dockerfile`, `fly.toml`, `.dockerignore`.
+
+```bash
+# From backend/
+brew install flyctl   # once
+fly auth login        # once
+fly deploy            # builds image, runs `alembic upgrade head`, starts Machines
+```
+
+App: `clinical-trial-navigator-api` (region `iad`). Public URL:
+`https://clinical-trial-navigator-api.fly.dev`.
+
+Set secrets (never commit values):
+
+```bash
+fly secrets set \
+  DATABASE_URL='postgresql+psycopg://...' \
+  PROFILE_ENCRYPTION_KEY='...' \
+  VAPID_PRIVATE_KEY='...' \
+  VAPID_PUBLIC_KEY='...' \
+  VAPID_SUBJECT='mailto:you@example.com' \
+  CORS_ORIGINS='https://clinical-trial-navigator-one.vercel.app'
+```
+
+Smoke check: `curl https://clinical-trial-navigator-api.fly.dev/health`
